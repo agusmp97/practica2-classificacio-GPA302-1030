@@ -13,8 +13,11 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
+from sklearn.metrics import f1_score, precision_recall_curve, average_precision_score, roc_curve, auc
 
-
+# ---------------------------------------------------
+# -------------------- APARTAT B --------------------
+# ---------------------------------------------------
 
 # import some data to play with
 iris = datasets.load_iris()
@@ -56,9 +59,9 @@ def curve_generator(name, probs):
     plt.show()
 
 
-from sklearn.metrics import f1_score, precision_recall_curve, average_precision_score, roc_curve, auc
 
 
+# -------------------- CORBES PRCISION-RECALL --------------------
 x_t, x_v, y_t, y_v = train_test_split(X, y, train_size=0.8)
 
 # Creem el regresor logístic  Logistic
@@ -102,8 +105,8 @@ probs = nb.predict_proba(x_v)
 curve_generator('Naive Bayes', probs)
 
 
+# -------------------- K-FOLD: ACCURACY, F1_MACRO I F1_MICRO--------------------
 
-#For amb K-fold
 models = []
 models.append (('Logistic Regression', LogisticRegression(solver ='lbfgs',  multi_class = 'ovr')))
 models.append (('Linear Discriminant Analysis', LinearDiscriminantAnalysis()))
@@ -129,10 +132,6 @@ for type_score in scoring:
         resultat.append(res_tmp)
         plt.plot(range(2,20),res_tmp, label='{}'.format(name))
         plt.ylim(0.6,1)
-
-        z = 3
-
-    # plt.legend(loc='upper right')
     plt.legend()
     plt.xlabel('Folds count')
     plt.ylabel('{}'.format(type_score))
@@ -143,4 +142,71 @@ for type_score in scoring:
 z=3
 
 
-#
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+def make_meshgrid(x, y, h=.02):
+    """Create a mesh of points to plot in
+    """
+    x_min, x_max = x.min() - 1, x.max() + 1
+    y_min, y_max = y.min() - 1, y.max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                         np.arange(y_min, y_max, h))
+    return xx, yy
+
+
+def plot_contours(ax, clf, xx, yy, **params):
+    """Plot the decision boundaries for a classifier."""
+    Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+    out = ax.contourf(xx, yy, Z, **params)
+    return out
+
+
+def show_C_effect(C=1.0, gamma=0.7, degree=3):
+    iris = datasets.load_iris()
+    X = iris.data[:, :2]
+    y = iris.target
+    titles = ('SVC with linear kernel',
+              'LinearSVC (linear kernel)',
+              'SVC with RBF kernel',
+              'SVC with polynomial (degree {}) kernel'.format(degree))
+    # C = 1.0  # SVM regularization parameter
+    models = (svm.SVC(kernel='linear', C=C),
+              svm.LinearSVC(C=C, max_iter=1000000),
+              svm.SVC(kernel='rbf', gamma=gamma, C=C),
+              svm.SVC(kernel='poly', degree=degree, gamma='auto', C=C))
+    models = (clf.fit(X, y) for clf in models)
+    plt.close('all')
+    fig, sub = plt.subplots(2, 2, figsize=(14, 9))
+    plt.subplots_adjust(wspace=0.4, hspace=0.4)
+    X0, X1 = X[:, 0], X[:, 1]
+    xx, yy = make_meshgrid(X0, X1)
+    for clf, title, ax in zip(models, titles, sub.flatten()):
+        plot_contours(ax, clf, xx, yy,
+                      cmap=plt.cm.coolwarm, alpha=0.8)
+        ax.scatter(X0, X1, c=y, cmap=plt.cm.coolwarm, s=20, edgecolors='k')
+        ax.set_xlim(xx.min(), xx.max())
+        ax.set_ylim(yy.min(), yy.max())
+        ax.set_xlabel('Sepal length')
+        ax.set_ylabel('Sepal width')
+        ax.set_xticks(())
+        ax.set_yticks(())
+        ax.set_title(title)
+    plt.suptitle("Execution parameters: C = {}, gamma = {}, degree = {}".format(C, gamma, degree))
+    plt.savefig("../figures/SVC_params-C_{}-g_{}-d_{}.png".format(C, gamma, degree))
+    plt.show()
+
+
+cs = [0.1, 1, 10, 100, 1000]
+for c in cs:
+    show_C_effect(C=c)
+
+gammas = [0.1, 1, 10, 100]
+for g in gammas:
+    show_C_effect(gamma=g)
+
+degrees = [0, 1, 2, 3, 4, 5, 6]
+for deg in degrees:
+    show_C_effect(degree=deg)
