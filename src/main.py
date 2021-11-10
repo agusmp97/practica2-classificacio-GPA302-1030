@@ -14,11 +14,15 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.metrics import f1_score, precision_recall_curve, average_precision_score, roc_curve, auc
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 
 # ---------------------------------------------------
 # -------------------- APARTAT B --------------------
 # ---------------------------------------------------
-
+"""
 # import some data to play with
 iris = datasets.load_iris()
 
@@ -140,15 +144,11 @@ for type_score in scoring:
     plt.show()
 
 z=3
+"""
 
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-
+"""
 def make_meshgrid(x, y, h=.02):
-    """Create a mesh of points to plot in
-    """
+    #Create a mesh of points to plot in
     x_min, x_max = x.min() - 1, x.max() + 1
     y_min, y_max = y.min() - 1, y.max() + 1
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
@@ -157,7 +157,7 @@ def make_meshgrid(x, y, h=.02):
 
 
 def plot_contours(ax, clf, xx, yy, **params):
-    """Plot the decision boundaries for a classifier."""
+    #Plot the decision boundaries for a classifier.
     Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
     Z = Z.reshape(xx.shape)
     out = ax.contourf(xx, yy, Z, **params)
@@ -210,3 +210,107 @@ for g in gammas:
 degrees = [0, 1, 2, 3, 4, 5, 6]
 for deg in degrees:
     show_C_effect(degree=deg)
+"""
+
+# ---------------------------------------------------
+# -------------------- APARTAT A --------------------
+# ---------------------------------------------------
+def load_dataset(path):
+    return pd.read_csv(path, header=0, delimiter=",")
+
+wp_dataset = load_dataset("../data/water_potability.csv")
+
+# +--------------------------+
+# | VISUALITZACIÓ INFORMACIÓ |
+# +--------------------------+
+# Mostra els primers 5 registres dels DataFrames dels jugadors
+def print_head(dataset):
+    print("HEAD del dataset de Water Potability")
+    print(dataset.head())
+    print("------------------------------------")
+
+#print_head(wp_dataset)
+
+# Funció que mostra per consola els tipus de dades de les característiques del DataFrame.
+def print_data_types():
+    print("------------------------------------")
+    print("Tipus de dades")
+    print(wp_dataset.dtypes)
+    print("------------------------------------")
+
+#print_data_types()
+
+# Funció que mostra la dimensionalitat del DataFrame
+def df_dimensionality(dataset):
+    data = dataset.values
+    # separem l'atribut objectiu Y de les caracterísitques X
+    x_data = data[:, :-1]  # Característiques del jugador
+    y_data = data[:, -1]  # Variable objectiu (target)
+    print("Dimensionalitat del DataFrame: {}:".format(dataset.shape))
+    print("Dimensionalitat de les característiques (X): {}".format(x_data.shape))
+    print("Dimensionalitat de la variable objectiu (Y): {}".format(y_data.shape))
+    print("------------------------------------")
+
+
+#df_dimensionality(wp_dataset)
+
+def y_balance(dataset):
+    ax = sns.countplot(x="Potability", data=dataset, palette={0: 'firebrick', 1: "cornflowerblue"})
+    plt.suptitle("Target attribute distribution (Water potability)")
+    label = ["Non Potable", "Potable"]
+    ax.bar_label(container=ax.containers[0], labels=label)
+    plt.xlabel('Potability')
+    plt.ylabel('Number of samples')
+    plt.show()
+
+    porc_pot = (len(dataset[dataset.Potability == 1]) / len(dataset.Potability)) * 100
+    print('The percentage of waters that are potable is: {:.2f}%'.format(porc_pot))
+
+y_balance(wp_dataset)
+
+
+# +-----------------------+
+# | CORRELACIÓ D'ATRIBUTS |
+# +-----------------------+
+# Funció que genera la matriu de correlació de Pearson d'un DataFrame i genera el plot
+def pearson_correlation(dataset):
+    plt.figure()
+    fig, ax = plt.subplots(figsize=(20, 10))  # figsize controla l'amplada i alçada de les cel·les de la matriu
+    plt.title("Matriu de correlació de Pearson")
+    sns.heatmap(dataset.corr(), annot=True, linewidths=.5, ax=ax)
+    plt.savefig("../figures/pearson_correlation_matrix_.png")
+    plt.show()
+
+
+#pearson_correlation(wp_dataset)
+
+
+
+
+# +-----------------------+
+# | TRACTAMENT D'ATRIBUTS |
+# +-----------------------+
+
+# Funció que substitueix els valors nuls del dataset pel valor numèric '0'.
+def nan_treatment(dataset):
+    print("Eliminació 'NaN' del DataFrame")
+    print(dataset.isnull().sum())
+    print("------------------------------------")
+    dataset['ph'] = dataset['ph'].fillna(dataset.groupby(['Potability'])['ph'].transform('mean'))
+    dataset['Sulfate'] = dataset['Sulfate'].fillna(dataset.groupby(['Potability'])['Sulfate'].transform('mean'))
+    dataset['Trihalomethanes'] = dataset['Trihalomethanes'].fillna(dataset.groupby(['Potability'])['Trihalomethanes'].transform('mean'))
+    print("------------------------------------")
+    print("Després de l'eliminació 'NaN' del DataFrame")
+    print(dataset.isnull().sum())
+    return dataset
+
+wp_dataset = nan_treatment(wp_dataset)
+
+# Funció que estandarditza els valors del DataFrame, per tal de permetre fer que les diferents
+# característiques siguin comparables entre elles.
+def standardize_mean(dataset):
+    return (dataset - dataset.mean(0)) / dataset.std(0)
+
+dataset_norm = standardize_mean(wp_dataset)
+
+pearson_correlation(dataset_norm)
