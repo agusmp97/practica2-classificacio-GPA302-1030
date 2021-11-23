@@ -237,7 +237,7 @@ def print_head(dataset):
     print(dataset.head())
     print("------------------------------------")
 
-print_head(wp_dataset)
+#print_head(wp_dataset)
 
 
 # Funció que mostra per consola els tipus de dades de les característiques del DataFrame.
@@ -261,7 +261,7 @@ def df_dimensionality(dataset):
     print("------------------------------------")
 
 
-df_dimensionality(wp_dataset)
+#df_dimensionality(wp_dataset)
 
 def y_balance(dataset):
     ax = sns.countplot(x="Potability", data=dataset, palette={0: 'firebrick', 1: "cornflowerblue"})
@@ -276,7 +276,7 @@ def y_balance(dataset):
     porc_pot = (len(dataset[dataset.Potability == 1]) / len(dataset.Potability)) * 100
     print('The percentage of waters that are potable is: {:.2f}%'.format(porc_pot))
 
-y_balance(wp_dataset)
+#y_balance(wp_dataset)
 
 
 # +-----------------------+
@@ -312,15 +312,15 @@ def histogrames(dataset):
 
 # Funció que substitueix els valors nuls del dataset pel valor numèric '0'.
 def nan_treatment(dataset):
-    #print("Eliminació 'NaN' del DataFrame")
-    #print(dataset.isnull().sum())
-    #print("------------------------------------")
+    print("Eliminació 'NaN' del DataFrame")
+    print(dataset.isnull().sum())
+    print("------------------------------------")
     dataset['ph'] = dataset['ph'].fillna(dataset.groupby(['Potability'])['ph'].transform('mean'))
     dataset['Sulfate'] = dataset['Sulfate'].fillna(dataset.groupby(['Potability'])['Sulfate'].transform('mean'))
     dataset['Trihalomethanes'] = dataset['Trihalomethanes'].fillna(dataset.groupby(['Potability'])['Trihalomethanes'].transform('mean'))
-    #print("------------------------------------")
-    #print("Després de l'eliminació 'NaN' del DataFrame")
-    #print(dataset.isnull().sum())
+    print("------------------------------------")
+    print("Després de l'eliminació 'NaN' del DataFrame")
+    print(dataset.isnull().sum())
     return dataset
 
 wp_dataset = nan_treatment(wp_dataset)
@@ -346,14 +346,14 @@ Random  y grid permite poner un badget , lesforc si fiquem el mateix dels dos si
 wp_data = dataset_norm
 x_data = wp_data[:, :-1]  # Característiques
 y_data = wp_data[:, -1]  # Variable objectiu (target)
-x_t, x_v, y_t, y_v = train_test_split(x_data, y_data, train_size=0.8)
+x_t, x_v, y_t, y_v = train_test_split(x_data, y_data, train_size=0.7)
 #x_t=x_v=x_data
 #y_t=y_v=y_data
 
 def SVM():
 
 
-    svc = svm.SVC(C=10.0, kernel='rbf', gamma=0.9, probability=True)
+    svc = svm.SVC(C=10.0, kernel='rbf', gamma=0.9, probability=True) #tol=0.001
 
     # l'entrenem
     svc.fit(x_t, y_t)
@@ -373,7 +373,7 @@ def Logistic_Regressor():
 
 #Logistic_Regressor()
 
-def Naive_Bayes():
+def Naive_Bayes(): #var_smoothing default=1e-9
     nb = GaussianNB()
     # l'entrenem
     nb.fit(x_t, y_t)
@@ -383,7 +383,7 @@ def Naive_Bayes():
 #Naive_Bayes()
 
 
-def Linear_Discriminant():
+def Linear_Discriminant(): #solver default=’svd’ ,shrinkage default=None, n_components default=None, tol default=1.0e-4
     lda = LinearDiscriminantAnalysis()
     # l'entrenem
     lda.fit(x_t, y_t)
@@ -393,20 +393,24 @@ def Linear_Discriminant():
 #Linear_Discriminant()
 
 
-def Decision_Tree():
+def Decision_Tree(): #criterion='gini', max_depth=None, min_samples_leaf=1,  random_state=None,
     cart = DecisionTreeClassifier()
     # l'entrenem
-    cart.fit(x_t, y_t)
-    probs = cart.predict_proba(x_v)
-    #plt.figure()
+    #cart.fit(x_t, y_t)
+    scores = model_selection.cross_val_predict(cart, x_data, y_data, cv=4, method='predict_proba')
+    #probs = cart.predict_proba(x_v)
+    curve_generator('Decision Tree', scores)
+    plt.figure()
+
     #tree.plot_tree(cart)
-    #plt.show()
+    plt.savefig("../figures/arbre.png")
+    plt.show()
 
     print("Correct classification Decision_Tree     ", 0.8, "% of the data: ", cart.score(x_v, y_v))
 
-#Decision_Tree()
+Decision_Tree()
 
-def KNN():
+def KNN(): #n_neighbors=5,  weights='uniform', algorithm='auto', metric='minkowski',
     knn = KNeighborsClassifier()
     # l'entrenem
     knn.fit(x_t, y_t)
@@ -415,53 +419,30 @@ def KNN():
 
 #KNN()
 
+"""
 models = []
-models.append(('SVM', svm.SVC(C=10.0, kernel='rbf', gamma=0.9, probability=True)))
+models.append(('SVM', svm.SVC(C=1.0, kernel='rbf', gamma=0.7, probability=True)))
 models.append (('Logistic Regression', LogisticRegression(C=2.0, fit_intercept=True, penalty='l2', tol=0.001)))
 models.append (('Guassian Naive Bayes', GaussianNB()))
 models.append (('Linear Discriminant Analysis', LinearDiscriminantAnalysis()))
 models.append (('CART', DecisionTreeClassifier()))
 models.append (('K Nearest Neigbors', KNeighborsClassifier()))
 
-"""
-i_index=[2,3,4,6,3276]
+
+i_index=[2,3,4,6,10,20,40,60]
 
 for index, (name, model) in enumerate(models):
 
         for i in i_index:
             K_Fold = model_selection.KFold (n_splits = i, shuffle=True)
             cv_results = model_selection.cross_val_score (model, x_data, y_data, cv = K_Fold, scoring = "accuracy")
-            message =  "%s (%f):  %f  (%f)" % (name, i,cv_results.mean (), cv_results.std())
+            message =  "%s (%f):  %f  (%f)" % (name, i,cv_results.mean(), cv_results.std())
             print (message)
 
+
+
+
 """
-
-
-
-
-#clf = AdaBoostClassifier(n_estimators=150)
-#scores = model_selection.cross_val_score(clf, x_data, y_data, cv=10)
-#print(scores.mean())
-
-clf = RandomForestClassifier(max_depth=10, n_estimators=219, random_state=178,n_jobs=-1)
-scores = model_selection.cross_val_score(clf, x_data, y_data, cv=60)
-print(scores.mean())
-
-#clf = HistGradientBoostingClassifier(max_iter=100)
-#scores = model_selection.cross_val_score(clf, x_data, y_data, cv=40)
-#print(scores.mean())
-
-#clf = ExtraTreesClassifier(n_estimators=100, max_depth=None, min_samples_split=2, random_state=0)
-#scores = model_selection.cross_val_score(clf, x_data, y_data, cv=10)
-#print(scores.mean())
-
-
-
-#bagging = BaggingClassifier(DecisionTreeClassifier(), max_samples=0.9, max_features=0.9)
-#scores = model_selection.cross_val_score(bagging, x_data, y_data, cv=5)
-#print(scores.mean())
-
-
 
 from sklearn import datasets
 from sklearn.model_selection import cross_val_score
@@ -475,60 +456,91 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.ensemble import StackingClassifier
 """
-estimator = [('rf', RandomForestClassifier(n_estimators=100, random_state=24)),('hgb', HistGradientBoostingClassifier(max_iter=100)), ('CART', DecisionTreeClassifier())]
-clf = StackingClassifier(estimators=estimator, final_estimator=GaussianNB())
+cvs=[2,5,10,20,40,60]
+
+for cv_triat in cvs:
+    clf = AdaBoostClassifier(n_estimators=150)
+    scores = model_selection.cross_val_score(clf, x_data, y_data, cv=cv_triat)
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"Ada Boost",cv_triat))
+
+    clf = RandomForestClassifier( n_estimators=218, random_state=178,n_jobs=-1)
+#clf.fit(x_t, y_t)
+#probs = clf.predict_proba(x_v)
+#print("Correct classification Random Forest     ", 0.7, "% of the data: ", clf.score(x_v, y_v))
+    scores = model_selection.cross_val_score(clf, x_data, y_data, cv=cv_triat)
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"Random Forest",cv_triat))
+
+    clf = HistGradientBoostingClassifier(max_iter=100)
+    scores = model_selection.cross_val_score(clf, x_data, y_data, cv=cv_triat)
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"HistGradBoost",cv_triat))
+
+    clf = ExtraTreesClassifier(n_estimators=100, max_depth=None, min_samples_split=2, random_state=0)
+    scores = model_selection.cross_val_score(clf, x_data, y_data, cv=cv_triat)
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"ExtraTrees",cv_triat))
+
+
+
+    bagging = BaggingClassifier(DecisionTreeClassifier(), max_samples=0.9, max_features=0.9)
+    scores = model_selection.cross_val_score(bagging, x_data, y_data, cv=cv_triat)
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"Bagging",cv_triat))
+
+
+
+
+    estimator = [('rf', RandomForestClassifier(n_estimators=100, random_state=24)),('hgb', HistGradientBoostingClassifier(max_iter=100)), ('CART', DecisionTreeClassifier())]
+    clf = StackingClassifier(estimators=estimator, final_estimator=GaussianNB())
 #clf.fit(x_t, y_t).score(x_v, y_v)
-#scores = cross_val_score(clf, x_data, y_data, scoring='accuracy', cv=40)
-print(clf.fit(x_t, y_t).score(x_v, y_v).mean())
-"""
-"""
-clf2 = RandomForestClassifier(n_estimators=150, random_state=24)
-clf3 = HistGradientBoostingClassifier(max_iter=100)
-clf1 = BaggingClassifier(DecisionTreeClassifier(), max_samples=0.9, max_features=0.9)
-clf4 = AdaBoostClassifier(n_estimators=150)
+    scores = cross_val_score(clf, x_data, y_data, scoring='accuracy', cv=cv_triat)
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(), "Stacking", cv_triat))
 
-eclf = VotingClassifier(estimators=[('bag',
-                              BaggingClassifier(base_estimator=DecisionTreeClassifier(),
-                                                max_features=0.9,
-                                                max_samples=0.9)),
-                             ('rf',
-                              RandomForestClassifier(n_estimators=300,
-                                                     random_state=1)),
-                             ('hgb',
-                              HistGradientBoostingClassifier(max_iter=50)),
-                             ('ADA', AdaBoostClassifier(n_estimators=150))],
-                 weights=[2, 2, 2, 1])
+
+
+    eclf = VotingClassifier(estimators=[('bag',
+                                 BaggingClassifier(base_estimator=DecisionTreeClassifier(),
+                                                    max_features=0.9,
+                                                    max_samples=0.9)),
+                                ('rf',
+                               RandomForestClassifier(n_estimators=300,
+                                                      random_state=1)),
+                               ('hgb',
+                                 HistGradientBoostingClassifier(max_iter=50)),
+                                  ('ADA', AdaBoostClassifier(n_estimators=150))],
+                     weights=[2, 2, 2, 1])
 
 
 
 
-for clf, label in zip([ clf1,clf2, clf3,clf4, eclf], ['Bagging', 'Random Forest', 'HistGradientBoosting', 'ADA',  'Ensemble']):
-    scores = cross_val_score(clf, x_data, y_data, scoring='accuracy', cv=40)
-    print("Accuracy: %f (+/- %0.2f) [%s]" % (scores.mean(), scores.std(), label))
 
-params = {'hgb__max_iter': [50, 200], 'rf__n_estimators': [20, 300], 'rf__random_state': [1, 200], 'ADA__n_estimators': [20, 150], 'bag__n_estimators': [20, 150]}
-grid = GridSearchCV(estimator=eclf, param_grid=params, cv=40)
+    scores = cross_val_score(eclf, x_data, y_data, scoring='accuracy', cv=cv_triat)
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"Voting1",cv_triat))
+    
+    params = {'hgb__max_iter': [50, 200], 'rf__n_estimators': [20, 300], 'rf__random_state': [1, 200], 'ADA__n_estimators': [20, 150], 'bag__n_estimators': [20, 150]}
+    grid = GridSearchCV(estimator=eclf, param_grid=params, cv=40)
 
-grid = grid.fit(x_data, y_data)
+    grid = grid.fit(x_data, y_data)
 
-best_estimator = grid.best_estimator_
-print(best_estimator)
-"""
-"""
-clf2 = RandomForestClassifier(n_estimators=150, random_state=24)
-clf3 = HistGradientBoostingClassifier(max_iter=100)
+    best_estimator = grid.best_estimator_
+    print(best_estimator)
+    
 
 
-eclf = VotingClassifier(estimators=[
-                             ('rf',
-                              RandomForestClassifier(n_estimators=150,
-                                                     random_state=24)),
-                             ('hgb',
-                              HistGradientBoostingClassifier(max_iter=100))], voting='hard')
-for clf, label in zip([ clf2, clf3, eclf], ['Random Forest', 'HistGradientBoosting', 'Ensemble']):
-    scores = cross_val_score(clf, x_data, y_data, scoring='accuracy', cv=40)
-    print("Accuracy: %f (+/- %0.2f) [%s]" % (scores.mean(), scores.std(), label))
-"""
+
+
+    eclf = VotingClassifier(estimators=[
+                                 ('rf',
+                                   RandomForestClassifier(n_estimators=218,
+                                                        random_state=178)),
+                                ('hgb',
+                                HistGradientBoostingClassifier(max_iter=100))], voting='hard')
+
+    scores = cross_val_score(eclf, x_data, y_data, scoring='accuracy', cv=cv_triat)
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"Voting2",cv_triat))
+    
+
+#for clf, label in zip([ clf2, clf3, eclf], ['Random Forest', 'HistGradientBoosting', 'Ensemble']):
+    #scores = cross_val_score(clf, x_data, y_data, scoring='accuracy', cv=40)
+    #print("Accuracy: %f (+/- %0.2f) [%s]" % (scores.mean(), scores.std(), label))
+
 #scores = model_selection.cross_val_predict(eclf, x_data, y_data, cv=40, method='predict_proba')
 #curve_generator('Ensemble: Random Forest i HistGradientBoosting', scores)
 
@@ -538,6 +550,31 @@ for clf, label in zip([ clf2, clf3, eclf], ['Random Forest', 'HistGradientBoosti
 
 #recordar canviar y_v per y_data en la funcio curve_generator
 
+"""
+"""
+clf = RandomForestClassifier( n_estimators=218, random_state=178,n_jobs=-1)
+scores = model_selection.cross_val_predict(clf, x_data, y_data, cv=40, method='predict_proba')
+curve_generator('Random Forest', scores)
+
+
+eclf = VotingClassifier(estimators=[('bag',
+                                     BaggingClassifier(base_estimator=DecisionTreeClassifier(),
+                                                       max_features=0.9,
+                                                       max_samples=0.9)),
+                                    ('rf',
+                                     RandomForestClassifier(n_estimators=300,
+                                                            random_state=1)),
+                                    ('hgb',
+                                     HistGradientBoostingClassifier(max_iter=50)),
+                                    ('ADA', AdaBoostClassifier(n_estimators=150))],
+                        weights=[2, 2, 2, 1], voting='soft')
+scores = model_selection.cross_val_predict(eclf, x_data, y_data, cv=60, method='predict_proba')
+curve_generator('Voting: bag+rf+hgb+ADA', scores)
+"""
+
+#clf.fit(x_t, y_t)
+#probs = clf.predict_proba(x_v)
+#print("Correct classification Random Forest     ", 0.7, "% of the data: ", clf.score(x_v, y_v))
 
 # +-----------------------+
 # | HIPERPARAMETRES       |
