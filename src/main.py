@@ -25,56 +25,68 @@ from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn import datasets
+from sklearn.model_selection import cross_val_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import VotingClassifier
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.ensemble import StackingClassifier
+import time
 
 # ---------------------------------------------------
 # -------------------- APARTAT B --------------------
 # ---------------------------------------------------
-"""
-# import some data to play with
+# import de les dades del Iris Dataset
 iris = datasets.load_iris()
 
-# Take the first two features. We could avoid this by using a two-dim dataset
+# Separació entre les dades d'entrada i de sortida
 X = iris.data[:, :2]
 y = iris.target
 
 
-
-"""
-
+# Aquesta funció crea les corbes de ROC i Precision-Recall
 def curve_generator(name, probs, curvesB=False, n_classes=2):
-    if curvesB: y = y_v
-    else: y = y_data
+    if curvesB:
+        y = y_v
+    else:
+        y = y_data
     plt.figure()
-    precision = {};
-    recall = {};
+    precision = {}
+    recall = {}
     average_precision = {}
     for i in range(n_classes):
         precision[i], recall[i], _ = precision_recall_curve(y == i, probs[:, i])
         average_precision[i] = average_precision_score(y == i, probs[:, i])
         plt.plot(recall[i], precision[i],
                  label='Precision-recall curve of class {} (area = {})'
-                       ''.format( i, round(average_precision[i],2)))
+                       ''.format(i, round(average_precision[i], 2)))
         plt.xlabel('Recall');
         plt.ylabel('Precision');
         plt.legend()
     plt.title('{} - PR curve '.format(name))
     # plt.savefig("../figures/PR_{}.png".format(name))
     plt.show()
-    fpr = {}; tpr = {}; roc_auc = {}
+    fpr = {};
+    tpr = {};
+    roc_auc = {}
     for i in range(n_classes):
-        fpr[i], tpr[i], _ = roc_curve(y== i, probs[:, i])
+        fpr[i], tpr[i], _ = roc_curve(y == i, probs[:, i])
         roc_auc[i] = auc(fpr[i], tpr[i])
     # Compute micro-average ROC curve and ROC area
     # Plot ROC curve
     plt.figure()
     for i in range(n_classes):
-        plt.plot(fpr[i], tpr[i], label='ROC curve of class {} (area = {})' ''.format( i, round(roc_auc[i],2)))
+        plt.plot(fpr[i], tpr[i], label='ROC curve of class {} (area = {})' ''.format(i, round(roc_auc[i], 2)))
     plt.legend()
     plt.title('{} - ROC'.format(name))
     # plt.savefig("../figures/ROC_{}.png".format(name))
     plt.show()
 
-"""
 
 # -------------------- CORBES PRCISION-RECALL --------------------
 x_t, x_v, y_t, y_v = train_test_split(X, y, train_size=0.8)
@@ -126,41 +138,41 @@ def compareClassifiers(curve, val_prop):
     print("Correct classification NB      ", val_prop, "% of the data: ", nb.score(x_v, y_v))
     if curve: curve_generator('Naive Bayes', probs, True, 3)
 
+
 # props_cv = [0.5, 0.7, 0.8, 0.9, 0.99]
 props_cv = [0.8]
 for prop in props_cv:
     print("------- Test amb prop_cv: ", prop)
     compareClassifiers(True, prop)
-"""
-"""
 
 # -------------------- K-FOLD: ACCURACY, F1_MACRO I F1_MICRO--------------------
 
 models = []
-models.append (('Logistic Regression', LogisticRegression(solver ='lbfgs',  multi_class = 'ovr')))
-models.append (('Linear Discriminant Analysis', LinearDiscriminantAnalysis()))
-models.append (('K Nearest Neigbors', KNeighborsClassifier()))
-models.append (('CART', DecisionTreeClassifier()))
-models.append (('Support Vector Machine', SVC(gamma ='scale')))
-models.append (('Guassian Naive Bayes', GaussianNB()))
+models.append(('Logistic Regression', LogisticRegression(solver='lbfgs', multi_class='ovr')))
+models.append(('Linear Discriminant Analysis', LinearDiscriminantAnalysis()))
+models.append(('K Nearest Neigbors', KNeighborsClassifier()))
+models.append(('CART', DecisionTreeClassifier()))
+models.append(('Support Vector Machine', SVC(gamma='scale')))
+models.append(('Guassian Naive Bayes', GaussianNB()))
 
-seed=6
-resultat=[]
-scoring=['Accuracy','F1_macro','F1_micro']
+seed = 6
+resultat = []
+scoring = ['Accuracy', 'F1_macro', 'F1_micro']
 import random
+
 plt.figure()
 for type_score in scoring:
     for index, (name, model) in enumerate(models):
         res_tmp = []
         for i in range(2, 20):
-            K_Fold = model_selection.KFold (n_splits = i, random_state  = random.randint(0,99), shuffle=True)
-            cv_results = model_selection.cross_val_score (model, X, y, cv = K_Fold, scoring = type_score.lower())
-            message =  "%s:  %f  (%f)" % (name, cv_results.mean (), cv_results.std())
-            print (message)
+            K_Fold = model_selection.KFold(n_splits=i, random_state=random.randint(0, 99), shuffle=True)
+            cv_results = model_selection.cross_val_score(model, X, y, cv=K_Fold, scoring=type_score.lower())
+            message = "%s:  %f  (%f)" % (name, cv_results.mean(), cv_results.std())
+            print(message)
             res_tmp.append(cv_results.mean())
         resultat.append(res_tmp)
-        plt.plot(range(2,20),res_tmp, label='{}'.format(name))
-        plt.ylim(0.6,1)
+        plt.plot(range(2, 20), res_tmp, label='{}'.format(name))
+        plt.ylim(0.6, 1)
     plt.legend()
     plt.xlabel('Folds count')
     plt.ylabel('{}'.format(type_score))
@@ -168,12 +180,11 @@ for type_score in scoring:
     plt.savefig("../figures/model_{}_kfoldB".format(type_score))
     plt.show()
 
-z=3
-"""
+z = 3
 
-"""
+
 def make_meshgrid(x, y, h=.02):
-    #Create a mesh of points to plot in
+    # Create a mesh of points to plot in
     x_min, x_max = x.min() - 1, x.max() + 1
     y_min, y_max = y.min() - 1, y.max() + 1
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
@@ -182,13 +193,14 @@ def make_meshgrid(x, y, h=.02):
 
 
 def plot_contours(ax, clf, xx, yy, **params):
-    #Plot the decision boundaries for a classifier.
+    # Plot the decision boundaries for a classifier.
     Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
     Z = Z.reshape(xx.shape)
     out = ax.contourf(xx, yy, Z, **params)
     return out
 
 
+# Aquesta funció
 def show_C_effect(C=1.0, gamma=0.7, degree=3):
     iris = datasets.load_iris()
     X = iris.data[:, :2]
@@ -235,15 +247,19 @@ for g in gammas:
 degrees = [0, 1, 2, 3, 4, 5, 6]
 for deg in degrees:
     show_C_effect(degree=deg)
-"""
+
 
 # ---------------------------------------------------
 # -------------------- APARTAT A --------------------
 # ---------------------------------------------------
+# Funció que carrega el dataset des del fitxer especificat per paràmetre.
+# Retorna un DataFrame.
 def load_dataset(path):
     return pd.read_csv(path, header=0, delimiter=",")
 
+
 wp_dataset = load_dataset("../data/water_potability.csv")
+
 
 # +--------------------------+
 # | VISUALITZACIÓ INFORMACIÓ |
@@ -254,7 +270,8 @@ def print_head(dataset):
     print(dataset.head())
     print("------------------------------------")
 
-#print_head(wp_dataset)
+
+# print_head(wp_dataset)
 
 
 # Funció que mostra per consola els tipus de dades de les característiques del DataFrame.
@@ -264,7 +281,8 @@ def print_data_types():
     print(wp_dataset.dtypes)
     print("------------------------------------")
 
-#print_data_types()
+
+# print_data_types()
 
 # Funció que mostra la dimensionalitat del DataFrame
 def df_dimensionality(dataset):
@@ -278,8 +296,11 @@ def df_dimensionality(dataset):
     print("------------------------------------")
 
 
-#df_dimensionality(wp_dataset)
+# df_dimensionality(wp_dataset)
 
+# Funció que calcula si les dades estan balancejades.
+# És a dir, si el nombre de mostres de les dues classes és semblant.
+# Guarda un plot amb aquesta informació.
 def y_balance(dataset):
     ax = sns.countplot(x="Potability", data=dataset, palette={0: 'firebrick', 1: "cornflowerblue"})
     plt.suptitle("Target attribute distribution (Water potability)")
@@ -293,7 +314,7 @@ def y_balance(dataset):
     porc_pot = (len(dataset[dataset.Potability == 1]) / len(dataset.Potability)) * 100
     print('The percentage of waters that are potable is: {:.2f}%'.format(porc_pot))
 
-#y_balance(wp_dataset)
+# y_balance(wp_dataset)
 
 
 # +-----------------------+
@@ -308,8 +329,10 @@ def pearson_correlation(dataset):
     plt.savefig("../figures/pearson_correlation_matrix_.png")
     plt.show()
 
+# pearson_correlation(wp_dataset)
 
-#pearson_correlation(wp_dataset)
+
+# Funció que genera els histogrames a partir de les dades del dataset.
 def histogrames(dataset):
     plt.figure()
 
@@ -318,9 +341,7 @@ def histogrames(dataset):
     plt.savefig("../figures/histograms_matrix_.png")
     plt.show()
 
-
-#histogrames(wp_dataset)
-
+# histogrames(wp_dataset)
 
 
 # +-----------------------+
@@ -334,7 +355,8 @@ def nan_treatment(dataset):
     print("------------------------------------")
     dataset['ph'] = dataset['ph'].fillna(dataset.groupby(['Potability'])['ph'].transform('mean'))
     dataset['Sulfate'] = dataset['Sulfate'].fillna(dataset.groupby(['Potability'])['Sulfate'].transform('mean'))
-    dataset['Trihalomethanes'] = dataset['Trihalomethanes'].fillna(dataset.groupby(['Potability'])['Trihalomethanes'].transform('mean'))
+    dataset['Trihalomethanes'] = dataset['Trihalomethanes'].fillna(
+        dataset.groupby(['Potability'])['Trihalomethanes'].transform('mean'))
     print("------------------------------------")
     print("Després de l'eliminació 'NaN' del DataFrame")
     print(dataset.isnull().sum())
@@ -342,84 +364,78 @@ def nan_treatment(dataset):
 
 wp_dataset = nan_treatment(wp_dataset)
 
-# Funció que estandarditza els valors del DataFrame, per tal de permetre fer que les diferents
+
+# Funció que transforma (escala) els valors del DataFrame, per tal de permetre fer que les diferents
 # característiques siguin comparables entre elles.
 def standardize_mean(dataset):
-    return  MinMaxScaler().fit_transform(dataset)
-    #return (dataset - dataset.mean(0)) / dataset.std(0)
+    return MinMaxScaler().fit_transform(dataset)
 
 dataset_norm = standardize_mean(wp_dataset)
 
-#pearson_correlation(dataset_norm)
+# pearson_correlation(dataset_norm)
 
-#roc mide como de separados estan las clases Falsos positives/falsos negativos y  ROC sube rápida,
-#precision recall decae
-"""
-Leave one Out es hacer KFold con N.
-KFold separa uno en test 
-    Fa todas las combinaciones de Ks elementos el conjunto de entrenamiento y luego hace media y desviación estandard
-Random  y grid permite poner un badget , lesforc si fiquem el mateix dels dos sigui similar
-"""
+
 wp_data = dataset_norm
 x_data = wp_data[:, :-1]  # Característiques
 y_data = wp_data[:, -1]  # Variable objectiu (target)
 x_t, x_v, y_t, y_v = train_test_split(x_data, y_data, train_size=0.7)
-#x_t=x_v=x_data
-#y_t=y_v=y_data
 
+
+# Funció que utilitza l'algorisme Support Vector Classifier per determinar la probabilitat de que les mostres
+# analitzades pertanyin a la classe de referència.
 def SVM():
-
-
-    svc = svm.SVC(C=10.0, kernel='rbf', gamma=0.9, probability=True) #tol=0.001
-
-    # l'entrenem
-    svc.fit(x_t, y_t)
-    probs = svc.predict_proba(x_v)
+    svc = svm.SVC(C=10.0, kernel='rbf', gamma=0.9, probability=True)
+    svc.fit(x_t, y_t)  # Entrena el model
+    probs = svc.predict_proba(x_v)  # Calcula la probabilitat de que X pertanyi a Y=1
 
     print("Correct classification SVM      ", 0.8, "% of the data: ", svc.score(x_v, y_v))
 
-#SVM()
+# SVM()
 
+
+# Funció que implementa un regressor logístic per tal de determinar la probabilitat de que les mostres
+# analitzades pertanyin a la classe de referència.
 def Logistic_Regressor():
     logireg = LogisticRegression(C=2.0, fit_intercept=True, penalty='l2', tol=0.001)
-    # l'entrenem
-    logireg.fit(x_t, y_t)
+    logireg.fit(x_t, y_t)  # Entrena el model
     probs = logireg.predict_proba(x_v)
     print("Correct classification Logistic Regression      ", 0.8, "% of the data: ", logireg.score(x_v, y_v))
 
+# Logistic_Regressor()
 
-#Logistic_Regressor()
 
-def Naive_Bayes(): #var_smoothing default=1e-9
+# Funció que utilitza l'algorisme Guassian Naive Bayes per determinar la probabilitat de que les mostres
+# # analitzades pertanyin a la classe de referència.
+def Naive_Bayes():  # var_smoothing default=1e-9
     nb = GaussianNB()
-    # l'entrenem
-    nb.fit(x_t, y_t)
+    nb.fit(x_t, y_t)  # Entrena el model
     probs = nb.predict_proba(x_v)
     print("Correct classification Naive Bayes     ", 0.8, "% of the data: ", nb.score(x_v, y_v))
 
-#Naive_Bayes()
+# Naive_Bayes()
 
-
-def Linear_Discriminant(): #solver default=’svd’ ,shrinkage default=None, n_components default=None, tol default=1.0e-4
+# Funció que utilitza el mètode Linear Discriminant per determinar la probabilitat de que les mostres
+# analitzades pertanyin a la classe de referència.
+# Els paràmetres per defecte que utilitza són:
+# solver=’svd’, shrinkage=None, n_components=None, tol=1.0e-4
+def Linear_Discriminant():
     lda = LinearDiscriminantAnalysis()
-    # l'entrenem
-    lda.fit(x_t, y_t)
+    lda.fit(x_t, y_t)  # Entrena el model
     probs = lda.predict_proba(x_v)
     print("Correct classification Linear_Discriminant     ", 0.8, "% of the data: ", lda.score(x_v, y_v))
 
-#Linear_Discriminant()
+# Linear_Discriminant()
 
-
-def Decision_Tree(): #criterion='gini', max_depth=None, min_samples_leaf=1,  random_state=None,
+# Funció que implementa el classificador basat en arbres de decisió per determinar a quina classe pertanyen les
+# mostres analitzades.
+# Els paràmetres per defecte són:
+# criterion='gini', max_depth=None, min_samples_leaf=1, random_state=None
+def Decision_Tree():
     cart = DecisionTreeClassifier()
-    # l'entrenem
-    #cart.fit(x_t, y_t)
+    # Fa la validació creuada per cada registre d'entrada
     scores = model_selection.cross_val_predict(cart, x_data, y_data, cv=4, method='predict_proba')
-    #probs = cart.predict_proba(x_v)
     curve_generator('Decision Tree', scores)
     plt.figure()
-
-    #tree.plot_tree(cart)
     plt.savefig("../figures/arbre.png")
     plt.show()
 
@@ -427,152 +443,120 @@ def Decision_Tree(): #criterion='gini', max_depth=None, min_samples_leaf=1,  ran
 
 Decision_Tree()
 
-def KNN(): #n_neighbors=5,  weights='uniform', algorithm='auto', metric='minkowski',
+
+# Funció que classifica les mostres analitzades utilitzant KNN. És a dir, classifica la mostra en funció
+# de la classe més votada (etiquetada) de les mostres més properes (per defecte, les 5 més properes).
+# Els paràmetres per defecte són:
+# n_neighbors=5,  weights='uniform', algorithm='auto', metric='minkowski',
+def KNN():
     knn = KNeighborsClassifier()
     # l'entrenem
     knn.fit(x_t, y_t)
     probs = knn.predict_proba(x_v)
     print("Correct classification KNN     ", 0.8, "% of the data: ", knn.score(x_v, y_v))
 
-#KNN()
+# KNN()
 
-"""
 models = []
 models.append(('SVM', svm.SVC(C=1.0, kernel='rbf', gamma=0.7, probability=True)))
-models.append (('Logistic Regression', LogisticRegression(C=2.0, fit_intercept=True, penalty='l2', tol=0.001)))
-models.append (('Guassian Naive Bayes', GaussianNB()))
-models.append (('Linear Discriminant Analysis', LinearDiscriminantAnalysis()))
-models.append (('CART', DecisionTreeClassifier()))
-models.append (('K Nearest Neigbors', KNeighborsClassifier()))
+models.append(('Logistic Regression', LogisticRegression(C=2.0, fit_intercept=True, penalty='l2', tol=0.001)))
+models.append(('Guassian Naive Bayes', GaussianNB()))
+models.append(('Linear Discriminant Analysis', LinearDiscriminantAnalysis()))
+models.append(('CART', DecisionTreeClassifier()))
+models.append(('K Nearest Neighbors', KNeighborsClassifier()))
 
-
-i_index=[2,3,4,6,10,20,40,60]
+i_index = [2, 3, 4, 6, 10, 20, 40, 60]
 
 for index, (name, model) in enumerate(models):
+    for i in i_index:
+        K_Fold = model_selection.KFold(n_splits=i, shuffle=True)
+        cv_results = model_selection.cross_val_score(model, x_data, y_data, cv=K_Fold, scoring="accuracy")
+        message = "%s (%f):  %f  (%f)" % (name, i, cv_results.mean(), cv_results.std())
+        print(message)
 
-        for i in i_index:
-            K_Fold = model_selection.KFold (n_splits = i, shuffle=True)
-            cv_results = model_selection.cross_val_score (model, x_data, y_data, cv = K_Fold, scoring = "accuracy")
-            message =  "%s (%f):  %f  (%f)" % (name, i,cv_results.mean(), cv_results.std())
-            print (message)
-
-
-
-
-"""
-
-from sklearn import datasets
-from sklearn.model_selection import cross_val_score
-from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import GaussianNB
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import VotingClassifier
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import make_pipeline
-from sklearn.ensemble import StackingClassifier
-"""
-cvs=[2,5,10,20,40,60]
+cvs = [2, 5, 10, 20, 40, 60]
 
 for cv_triat in cvs:
     clf = AdaBoostClassifier(n_estimators=150)
     scores = model_selection.cross_val_score(clf, x_data, y_data, cv=cv_triat)
-    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"Ada Boost",cv_triat))
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(), "Ada Boost", cv_triat))
 
-    clf = RandomForestClassifier( n_estimators=218, random_state=178,n_jobs=-1)
-#clf.fit(x_t, y_t)
-#probs = clf.predict_proba(x_v)
-#print("Correct classification Random Forest     ", 0.7, "% of the data: ", clf.score(x_v, y_v))
+    clf = RandomForestClassifier(n_estimators=218, random_state=178, n_jobs=-1)
+    # clf.fit(x_t, y_t)
+    # probs = clf.predict_proba(x_v)
+    # print("Correct classification Random Forest     ", 0.7, "% of the data: ", clf.score(x_v, y_v))
     scores = model_selection.cross_val_score(clf, x_data, y_data, cv=cv_triat)
-    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"Random Forest",cv_triat))
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(), "Random Forest", cv_triat))
 
     clf = HistGradientBoostingClassifier(max_iter=100)
     scores = model_selection.cross_val_score(clf, x_data, y_data, cv=cv_triat)
-    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"HistGradBoost",cv_triat))
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(), "HistGradBoost", cv_triat))
 
     clf = ExtraTreesClassifier(n_estimators=100, max_depth=None, min_samples_split=2, random_state=0)
     scores = model_selection.cross_val_score(clf, x_data, y_data, cv=cv_triat)
-    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"ExtraTrees",cv_triat))
-
-
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(), "ExtraTrees", cv_triat))
 
     bagging = BaggingClassifier(DecisionTreeClassifier(), max_samples=0.9, max_features=0.9)
     scores = model_selection.cross_val_score(bagging, x_data, y_data, cv=cv_triat)
-    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"Bagging",cv_triat))
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(), "Bagging", cv_triat))
 
-
-
-
-    estimator = [('rf', RandomForestClassifier(n_estimators=100, random_state=24)),('hgb', HistGradientBoostingClassifier(max_iter=100)), ('CART', DecisionTreeClassifier())]
+    estimator = [('rf', RandomForestClassifier(n_estimators=100, random_state=24)),
+                 ('hgb', HistGradientBoostingClassifier(max_iter=100)), ('CART', DecisionTreeClassifier())]
     clf = StackingClassifier(estimators=estimator, final_estimator=GaussianNB())
-#clf.fit(x_t, y_t).score(x_v, y_v)
+    # clf.fit(x_t, y_t).score(x_v, y_v)
     scores = cross_val_score(clf, x_data, y_data, scoring='accuracy', cv=cv_triat)
     print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(), "Stacking", cv_triat))
 
-
-
     eclf = VotingClassifier(estimators=[('bag',
-                                 BaggingClassifier(base_estimator=DecisionTreeClassifier(),
-                                                    max_features=0.9,
-                                                    max_samples=0.9)),
-                                ('rf',
-                               RandomForestClassifier(n_estimators=300,
-                                                      random_state=1)),
-                               ('hgb',
-                                 HistGradientBoostingClassifier(max_iter=50)),
-                                  ('ADA', AdaBoostClassifier(n_estimators=150))],
-                     weights=[2, 2, 2, 1])
-
-
-
-
+                                         BaggingClassifier(base_estimator=DecisionTreeClassifier(),
+                                                           max_features=0.9,
+                                                           max_samples=0.9)),
+                                        ('rf',
+                                         RandomForestClassifier(n_estimators=300,
+                                                                random_state=1)),
+                                        ('hgb',
+                                         HistGradientBoostingClassifier(max_iter=50)),
+                                        ('ADA', AdaBoostClassifier(n_estimators=150))],
+                            weights=[2, 2, 2, 1])
 
     scores = cross_val_score(eclf, x_data, y_data, scoring='accuracy', cv=cv_triat)
-    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"Voting1",cv_triat))
-    
-    params = {'hgb__max_iter': [50, 200], 'rf__n_estimators': [20, 300], 'rf__random_state': [1, 200], 'ADA__n_estimators': [20, 150], 'bag__n_estimators': [20, 150]}
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(), "Voting1", cv_triat))
+
+    params = {'hgb__max_iter': [50, 200], 'rf__n_estimators': [20, 300], 'rf__random_state': [1, 200],
+              'ADA__n_estimators': [20, 150], 'bag__n_estimators': [20, 150]}
     grid = GridSearchCV(estimator=eclf, param_grid=params, cv=40)
 
     grid = grid.fit(x_data, y_data)
 
     best_estimator = grid.best_estimator_
     print(best_estimator)
-    
-
-
-
 
     eclf = VotingClassifier(estimators=[
-                                 ('rf',
-                                   RandomForestClassifier(n_estimators=218,
-                                                        random_state=178)),
-                                ('hgb',
-                                HistGradientBoostingClassifier(max_iter=100))], voting='hard')
+        ('rf',
+         RandomForestClassifier(n_estimators=218,
+                                random_state=178)),
+        ('hgb',
+         HistGradientBoostingClassifier(max_iter=100))], voting='hard')
 
     scores = cross_val_score(eclf, x_data, y_data, scoring='accuracy', cv=cv_triat)
-    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(),"Voting2",cv_triat))
-    
+    print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(), "Voting2", cv_triat))
 
-#for clf, label in zip([ clf2, clf3, eclf], ['Random Forest', 'HistGradientBoosting', 'Ensemble']):
-    #scores = cross_val_score(clf, x_data, y_data, scoring='accuracy', cv=40)
-    #print("Accuracy: %f (+/- %0.2f) [%s]" % (scores.mean(), scores.std(), label))
+# for clf, label in zip([ clf2, clf3, eclf], ['Random Forest', 'HistGradientBoosting', 'Ensemble']):
+# scores = cross_val_score(clf, x_data, y_data, scoring='accuracy', cv=40)
+# print("Accuracy: %f (+/- %0.2f) [%s]" % (scores.mean(), scores.std(), label))
 
-#scores = model_selection.cross_val_predict(eclf, x_data, y_data, cv=40, method='predict_proba')
-#curve_generator('Ensemble: Random Forest i HistGradientBoosting', scores)
+# scores = model_selection.cross_val_predict(eclf, x_data, y_data, cv=40, method='predict_proba')
+# curve_generator('Ensemble: Random Forest i HistGradientBoosting', scores)
 
-#clf = RandomForestClassifier(n_estimators=1000, max_depth=None, random_state=24)
-#scores = model_selection.cross_val_predict(clf, x_data, y_data, cv=40, method='predict_proba')
-#curve_generator('Random Forest', scores)
+# clf = RandomForestClassifier(n_estimators=1000, max_depth=None, random_state=24)
+# scores = model_selection.cross_val_predict(clf, x_data, y_data, cv=40, method='predict_proba')
+# curve_generator('Random Forest', scores)
 
-#recordar canviar y_v per y_data en la funcio curve_generator
+# recordar canviar y_v per y_data en la funcio curve_generator
 
-"""
-"""
-clf = RandomForestClassifier( n_estimators=218, random_state=178,n_jobs=-1)
+clf = RandomForestClassifier(n_estimators=218, random_state=178, n_jobs=-1)
 scores = model_selection.cross_val_predict(clf, x_data, y_data, cv=40, method='predict_proba')
 curve_generator('Random Forest', scores)
-
 
 eclf = VotingClassifier(estimators=[('bag',
                                      BaggingClassifier(base_estimator=DecisionTreeClassifier(),
@@ -587,28 +571,21 @@ eclf = VotingClassifier(estimators=[('bag',
                         weights=[2, 2, 2, 1], voting='soft')
 scores = model_selection.cross_val_predict(eclf, x_data, y_data, cv=60, method='predict_proba')
 curve_generator('Voting: bag+rf+hgb+ADA', scores)
-"""
 
-#clf.fit(x_t, y_t)
-#probs = clf.predict_proba(x_v)
-#print("Correct classification Random Forest     ", 0.7, "% of the data: ", clf.score(x_v, y_v))
+# clf.fit(x_t, y_t)
+# probs = clf.predict_proba(x_v)
+# print("Correct classification Random Forest     ", 0.7, "% of the data: ", clf.score(x_v, y_v))
 
-# +-----------------------+
-# | HIPERPARAMETRES       |
-# +-----------------------+
-"""
-import time
-
+# +-----------------+
+# | HIPERPARÀMETRES |
+# +-----------------+
 start = time.time()
-
 
 clf = RandomForestClassifier(n_estimators=150, max_depth=None, random_state=24)
 
-
-
-
-#params = { 'n_estimators': [20, 60, 100, 150, 200,300], 'random_state': [1,24,50,75, 200], 'max_depth': [1,6,16,32]}
-params = { 'n_estimators': [20,60,100,150,200,300,1000], 'random_state': [1,24,36,50,64,75, 200],'max_depth': [1,6,16,32]}
+# params = { 'n_estimators': [20, 60, 100, 150, 200,300], 'random_state': [1,24,50,75, 200], 'max_depth': [1,6,16,32]}
+params = {'n_estimators': [20, 60, 100, 150, 200, 300, 1000], 'random_state': [1, 24, 36, 50, 64, 75, 200],
+          'max_depth': [1, 6, 16, 32]}
 grid = GridSearchCV(estimator=clf, param_grid=params, n_jobs=-1)
 
 grid = grid.fit(x_data, y_data)
@@ -616,26 +593,23 @@ best_estimator = grid.best_estimator_
 print(best_estimator)
 
 end = time.time()
-"""
 
-"""
-import time
 from scipy.stats import rv_discrete
-p=np.arange(1,1000)
-s=np.arange(1,1000)
-d=np.arange(1,32)
+
+p = np.arange(1, 1000)
+s = np.arange(1, 1000)
+d = np.arange(1, 32)
 start = time.time()
 
-
 clf = RandomForestClassifier()
-#params = { 'n_estimators': [20, 60, 100, 150, 200,300], 'random_state': [1,24,50,75, 200], 'max_depth': [1,6,16,32]}
-params = { 'n_estimators': p, 'random_state': s,'max_depth': d}
+# params = { 'n_estimators': [20, 60, 100, 150, 200,300], 'random_state': [1,24,50,75, 200], 'max_depth': [1,6,16,32]}
+params = {'n_estimators': p, 'random_state': s, 'max_depth': d}
 randomS = RandomizedSearchCV(estimator=clf, param_distributions=params, n_jobs=-1, n_iter=1000)
 
 randomS = randomS.fit(x_data, y_data)
 best_estimator = randomS.best_estimator_
 print(best_estimator)
 
-end = time.time()"""
+end = time.time()
 
-#print('time: '+str(end - start))
+# print('time: '+str(end - start))
