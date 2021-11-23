@@ -40,26 +40,29 @@ y = iris.target
 
 
 """
-n_classes = 2
-def curve_generator(name, probs):
+
+def curve_generator(name, probs, curvesB=False, n_classes=2):
+    if curvesB: y = y_v
+    else: y = y_data
     plt.figure()
     precision = {};
     recall = {};
     average_precision = {}
     for i in range(n_classes):
-        precision[i], recall[i], _ = precision_recall_curve(y_data == i, probs[:, i])
-        average_precision[i] = average_precision_score(y_data == i, probs[:, i])
+        precision[i], recall[i], _ = precision_recall_curve(y == i, probs[:, i])
+        average_precision[i] = average_precision_score(y == i, probs[:, i])
         plt.plot(recall[i], precision[i],
                  label='Precision-recall curve of class {} (area = {})'
                        ''.format( i, round(average_precision[i],2)))
         plt.xlabel('Recall');
         plt.ylabel('Precision');
         plt.legend()
-    plt.title('{}'.format(name))
+    plt.title('{} - PR curve '.format(name))
+    # plt.savefig("../figures/PR_{}.png".format(name))
     plt.show()
     fpr = {}; tpr = {}; roc_auc = {}
     for i in range(n_classes):
-        fpr[i], tpr[i], _ = roc_curve(y_data == i, probs[:, i])
+        fpr[i], tpr[i], _ = roc_curve(y== i, probs[:, i])
         roc_auc[i] = auc(fpr[i], tpr[i])
     # Compute micro-average ROC curve and ROC area
     # Plot ROC curve
@@ -67,55 +70,69 @@ def curve_generator(name, probs):
     for i in range(n_classes):
         plt.plot(fpr[i], tpr[i], label='ROC curve of class {} (area = {})' ''.format( i, round(roc_auc[i],2)))
     plt.legend()
-    plt.title('{}'.format(name))
+    plt.title('{} - ROC'.format(name))
+    # plt.savefig("../figures/ROC_{}.png".format(name))
     plt.show()
 
 """
 
-
 # -------------------- CORBES PRCISION-RECALL --------------------
 x_t, x_v, y_t, y_v = train_test_split(X, y, train_size=0.8)
 
-# Creem el regresor logístic  Logistic
-logireg = LogisticRegression(C=2.0, fit_intercept=True, penalty='l2', tol=0.001)
-# l'entrenem
-logireg.fit(x_t, y_t)
-probs = logireg.predict_proba(x_v)
-print("Correct classification Logistic ", 0.8, "% of the data: ", logireg.score(x_v, y_v))
-curve_generator('Logistic Regressor', probs)
+def compareClassifiers(curve, val_prop):
+    x_t, x_v, y_t, y_v = train_test_split(X, y, train_size=val_prop)
 
-# Creem el regresor logístic SVM
-svc = svm.SVC(C=10.0, kernel='rbf', gamma=0.9, probability=True)
-# l'entrenem
-svc.fit(x_t, y_t)
-probs = svc.predict_proba(x_v)
-print("Correct classification SVM      ", 0.8, "% of the data: ", svc.score(x_v, y_v))
-curve_generator('SVM', probs)
+    # Creem el regresor logístic  Logistic
+    logireg = LogisticRegression(C=2.0, fit_intercept=True, penalty='l2', tol=0.001)
+    # l'entrenem
+    logireg.fit(x_t, y_t)
+    probs = logireg.predict_proba(x_v)
+    print("Correct classification Logistic ", val_prop, "% of the data: ", logireg.score(x_v, y_v))
+    if curve: curve_generator('Logistic Regressor', probs, True, 3)
 
-# KNN
-knn = KNeighborsClassifier()
-knn.fit(x_t, y_t)
-probs = knn.predict_proba(x_v)
-curve_generator('KNN', probs)
+    # Creem el regresor logístic SVM
+    svc = svm.SVC(C=10.0, kernel='rbf', gamma=0.9, probability=True)
+    # l'entrenem
+    svc.fit(x_t, y_t)
+    probs = svc.predict_proba(x_v)
+    print("Correct classification SVM      ", val_prop, "% of the data: ", svc.score(x_v, y_v))
+    if curve: curve_generator('SVM', probs, True, 3)
 
-# LDA
-lda = LinearDiscriminantAnalysis()
-lda.fit(x_t, y_t)
-probs = lda.predict_proba(x_v)
-curve_generator('LDA', probs)
+    # KNN
+    knn = KNeighborsClassifier()
+    knn.fit(x_t, y_t)
+    probs = knn.predict_proba(x_v)
+    print("Correct classification KNN      ", val_prop, "% of the data: ", knn.score(x_v, y_v))
+    if curve: curve_generator('KNN', probs, True, 3)
 
-# CART
-cart = DecisionTreeClassifier()
-cart.fit(x_t, y_t)
-probs = cart.predict_proba(x_v)
-curve_generator('CART', probs)
+    # LDA
+    lda = LinearDiscriminantAnalysis()
+    lda.fit(x_t, y_t)
+    probs = lda.predict_proba(x_v)
+    print("Correct classification LDA      ", val_prop, "% of the data: ", lda.score(x_v, y_v))
+    if curve: curve_generator('LDA', probs, True, 3)
 
-# NB
-nb = GaussianNB()
-nb.fit(x_t, y_t)
-probs = nb.predict_proba(x_v)
-curve_generator('Naive Bayes', probs)
+    # CART
+    cart = DecisionTreeClassifier()
+    cart.fit(x_t, y_t)
+    probs = cart.predict_proba(x_v)
+    print("Correct classification CART      ", val_prop, "% of the data: ", cart.score(x_v, y_v))
+    if curve: curve_generator('CART', probs, True, 3)
 
+    # NB
+    nb = GaussianNB()
+    nb.fit(x_t, y_t)
+    probs = nb.predict_proba(x_v)
+    print("Correct classification NB      ", val_prop, "% of the data: ", nb.score(x_v, y_v))
+    if curve: curve_generator('Naive Bayes', probs, True, 3)
+
+# props_cv = [0.5, 0.7, 0.8, 0.9, 0.99]
+props_cv = [0.8]
+for prop in props_cv:
+    print("------- Test amb prop_cv: ", prop)
+    compareClassifiers(True, prop)
+"""
+"""
 
 # -------------------- K-FOLD: ACCURACY, F1_MACRO I F1_MICRO--------------------
 
