@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from sklearn import tree
+from scipy.stats import rv_discrete
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import BaggingClassifier
@@ -37,6 +38,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.ensemble import StackingClassifier
 import time
+import random
 
 # ---------------------------------------------------
 # -------------------- APARTAT B --------------------
@@ -49,16 +51,18 @@ X = iris.data[:, :2]
 y = iris.target
 
 
+# -------------------- CORBES PRCISION-RECALL --------------------
 # Aquesta funció crea les corbes de ROC i Precision-Recall
 def curve_generator(name, probs, curvesB=False, n_classes=2):
-    if curvesB:
+    if curvesB:  # Indica si són les corbes amb les dades de l'apartat B.
         y = y_v
-    else:
+    else:  # Indica si són les corbes amb les dades de l'apartat A.
         y = y_data
     plt.figure()
     precision = {}
     recall = {}
     average_precision = {}
+    # Genera la corba precision-recall per cadascuna de les classes.
     for i in range(n_classes):
         precision[i], recall[i], _ = precision_recall_curve(y == i, probs[:, i])
         average_precision[i] = average_precision_score(y == i, probs[:, i])
@@ -74,6 +78,8 @@ def curve_generator(name, probs, curvesB=False, n_classes=2):
     fpr = {};
     tpr = {};
     roc_auc = {}
+
+    # Genera la corba ROC per cadascuna de les classes.
     for i in range(n_classes):
         fpr[i], tpr[i], _ = roc_curve(y == i, probs[:, i])
         roc_auc[i] = auc(fpr[i], tpr[i])
@@ -88,9 +94,11 @@ def curve_generator(name, probs, curvesB=False, n_classes=2):
     plt.show()
 
 
-# -------------------- CORBES PRCISION-RECALL --------------------
 x_t, x_v, y_t, y_v = train_test_split(X, y, train_size=0.8)
 
+
+# Funció que entrena els diferents classificadors i mostra el percentatge de mostres classificades
+# correctament per cadascun dels models.
 def compareClassifiers(curve, val_prop):
     x_t, x_v, y_t, y_v = train_test_split(X, y, train_size=val_prop)
 
@@ -140,14 +148,13 @@ def compareClassifiers(curve, val_prop):
 
 
 # props_cv = [0.5, 0.7, 0.8, 0.9, 0.99]
-props_cv = [0.8]
+props_cv = [0.8]  # Indica el percentatge de dades de training, necessari per fer els diferents splits.
 for prop in props_cv:
     print("------- Test amb prop_cv: ", prop)
     compareClassifiers(True, prop)
 
 # -------------------- K-FOLD: ACCURACY, F1_MACRO I F1_MICRO--------------------
-
-models = []
+models = []  # Conté els diferents classificadors de Sklearn que s'utilitzaran.
 models.append(('Logistic Regression', LogisticRegression(solver='lbfgs', multi_class='ovr')))
 models.append(('Linear Discriminant Analysis', LinearDiscriminantAnalysis()))
 models.append(('K Nearest Neigbors', KNeighborsClassifier()))
@@ -155,12 +162,11 @@ models.append(('CART', DecisionTreeClassifier()))
 models.append(('Support Vector Machine', SVC(gamma='scale')))
 models.append(('Guassian Naive Bayes', GaussianNB()))
 
-seed = 6
 resultat = []
 scoring = ['Accuracy', 'F1_macro', 'F1_micro']
-import random
 
 plt.figure()
+# Calcula, per les diferents mètriques de scoring, els resultats obtinguts aplicant K-Fold amb diferents folds.
 for type_score in scoring:
     for index, (name, model) in enumerate(models):
         res_tmp = []
@@ -180,11 +186,9 @@ for type_score in scoring:
     plt.savefig("../figures/model_{}_kfoldB".format(type_score))
     plt.show()
 
-z = 3
 
-
+# Funció que crea la malla de punts per fer el plot
 def make_meshgrid(x, y, h=.02):
-    # Create a mesh of points to plot in
     x_min, x_max = x.min() - 1, x.max() + 1
     y_min, y_max = y.min() - 1, y.max() + 1
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
@@ -192,15 +196,16 @@ def make_meshgrid(x, y, h=.02):
     return xx, yy
 
 
+# Funció que dibuixa els límits de decisió dels plots del classificador.
 def plot_contours(ax, clf, xx, yy, **params):
-    # Plot the decision boundaries for a classifier.
     Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
     Z = Z.reshape(xx.shape)
     out = ax.contourf(xx, yy, Z, **params)
     return out
 
 
-# Aquesta funció
+# Aquesta funció entrena els quatre tipus de SVC amb els diferents hiperparàmetres introduïts i visualitza
+# els resultats amb el meshgrid.
 def show_C_effect(C=1.0, gamma=0.7, degree=3):
     iris = datasets.load_iris()
     X = iris.data[:, :2]
@@ -209,13 +214,15 @@ def show_C_effect(C=1.0, gamma=0.7, degree=3):
               'LinearSVC (linear kernel)',
               'SVC with RBF kernel',
               'SVC with polynomial (degree {}) kernel'.format(degree))
-    # C = 1.0  # SVM regularization parameter
+    # Especifica el valor dels diferents hiperparàmetres dels SVC.
     models = (svm.SVC(kernel='linear', C=C),
               svm.LinearSVC(C=C, max_iter=1000000),
               svm.SVC(kernel='rbf', gamma=gamma, C=C),
               svm.SVC(kernel='poly', degree=degree, gamma='auto', C=C))
+    # Entrena els models.
     models = (clf.fit(X, y) for clf in models)
     plt.close('all')
+    # Crea els plots.
     fig, sub = plt.subplots(2, 2, figsize=(14, 9))
     plt.subplots_adjust(wspace=0.4, hspace=0.4)
     X0, X1 = X[:, 0], X[:, 1]
@@ -236,14 +243,17 @@ def show_C_effect(C=1.0, gamma=0.7, degree=3):
     plt.show()
 
 
+# Entrena els SVC amb diferents paràmetres de C.
 cs = [0.1, 1, 10, 100, 1000]
 for c in cs:
     show_C_effect(C=c)
 
+# Entrena els SVC amb diferents paràmetres de gamma.
 gammas = [0.1, 1, 10, 100]
 for g in gammas:
     show_C_effect(gamma=g)
 
+# Entrena els SVC amb diferents degrees.
 degrees = [0, 1, 2, 3, 4, 5, 6]
 for deg in degrees:
     show_C_effect(degree=deg)
@@ -284,6 +294,7 @@ def print_data_types():
 
 # print_data_types()
 
+
 # Funció que mostra la dimensionalitat del DataFrame
 def df_dimensionality(dataset):
     data = dataset.values
@@ -297,6 +308,7 @@ def df_dimensionality(dataset):
 
 
 # df_dimensionality(wp_dataset)
+
 
 # Funció que calcula si les dades estan balancejades.
 # És a dir, si el nombre de mostres de les dues classes és semblant.
@@ -314,6 +326,7 @@ def y_balance(dataset):
     porc_pot = (len(dataset[dataset.Potability == 1]) / len(dataset.Potability)) * 100
     print('The percentage of waters that are potable is: {:.2f}%'.format(porc_pot))
 
+
 # y_balance(wp_dataset)
 
 
@@ -329,6 +342,7 @@ def pearson_correlation(dataset):
     plt.savefig("../figures/pearson_correlation_matrix_.png")
     plt.show()
 
+
 # pearson_correlation(wp_dataset)
 
 
@@ -340,6 +354,7 @@ def histogrames(dataset):
     relacio = sns.pairplot(dataset)
     plt.savefig("../figures/histograms_matrix_.png")
     plt.show()
+
 
 # histogrames(wp_dataset)
 
@@ -362,6 +377,7 @@ def nan_treatment(dataset):
     print(dataset.isnull().sum())
     return dataset
 
+
 wp_dataset = nan_treatment(wp_dataset)
 
 
@@ -369,6 +385,7 @@ wp_dataset = nan_treatment(wp_dataset)
 # característiques siguin comparables entre elles.
 def standardize_mean(dataset):
     return MinMaxScaler().fit_transform(dataset)
+
 
 dataset_norm = standardize_mean(wp_dataset)
 
@@ -378,6 +395,7 @@ dataset_norm = standardize_mean(wp_dataset)
 wp_data = dataset_norm
 x_data = wp_data[:, :-1]  # Característiques
 y_data = wp_data[:, -1]  # Variable objectiu (target)
+# Fa el split de les dades d'entrenament i validació.
 x_t, x_v, y_t, y_v = train_test_split(x_data, y_data, train_size=0.7)
 
 
@@ -390,6 +408,7 @@ def SVM():
 
     print("Correct classification SVM      ", 0.8, "% of the data: ", svc.score(x_v, y_v))
 
+
 # SVM()
 
 
@@ -398,8 +417,9 @@ def SVM():
 def Logistic_Regressor():
     logireg = LogisticRegression(C=2.0, fit_intercept=True, penalty='l2', tol=0.001)
     logireg.fit(x_t, y_t)  # Entrena el model
-    probs = logireg.predict_proba(x_v)
+    probs = logireg.predict_proba(x_v)  # Calcula la probabilitat de que X pertanyi a Y=1
     print("Correct classification Logistic Regression      ", 0.8, "% of the data: ", logireg.score(x_v, y_v))
+
 
 # Logistic_Regressor()
 
@@ -409,8 +429,9 @@ def Logistic_Regressor():
 def Naive_Bayes():  # var_smoothing default=1e-9
     nb = GaussianNB()
     nb.fit(x_t, y_t)  # Entrena el model
-    probs = nb.predict_proba(x_v)
+    probs = nb.predict_proba(x_v)  # Calcula la probabilitat de que X pertanyi a Y=1
     print("Correct classification Naive Bayes     ", 0.8, "% of the data: ", nb.score(x_v, y_v))
+
 
 # Naive_Bayes()
 
@@ -421,8 +442,9 @@ def Naive_Bayes():  # var_smoothing default=1e-9
 def Linear_Discriminant():
     lda = LinearDiscriminantAnalysis()
     lda.fit(x_t, y_t)  # Entrena el model
-    probs = lda.predict_proba(x_v)
+    probs = lda.predict_proba(x_v)  # Calcula la probabilitat de que X pertanyi a Y=1
     print("Correct classification Linear_Discriminant     ", 0.8, "% of the data: ", lda.score(x_v, y_v))
+
 
 # Linear_Discriminant()
 
@@ -436,12 +458,14 @@ def Decision_Tree():
     scores = model_selection.cross_val_predict(cart, x_data, y_data, cv=4, method='predict_proba')
     curve_generator('Decision Tree', scores)
     plt.figure()
-    plt.savefig("../figures/arbre.png")
+    # tree.plot_tree(cart)
+    # plt.savefig("../figures/arbre.png")
     plt.show()
 
     print("Correct classification Decision_Tree     ", 0.8, "% of the data: ", cart.score(x_v, y_v))
 
-Decision_Tree()
+
+# Decision_Tree()
 
 
 # Funció que classifica les mostres analitzades utilitzant KNN. És a dir, classifica la mostra en funció
@@ -450,13 +474,15 @@ Decision_Tree()
 # n_neighbors=5,  weights='uniform', algorithm='auto', metric='minkowski',
 def KNN():
     knn = KNeighborsClassifier()
-    # l'entrenem
-    knn.fit(x_t, y_t)
-    probs = knn.predict_proba(x_v)
+    knn.fit(x_t, y_t)  # Entrena el model
+    probs = knn.predict_proba(x_v)  # Calcula la probabilitat de que X pertanyi a Y=1
     print("Correct classification KNN     ", 0.8, "% of the data: ", knn.score(x_v, y_v))
+
 
 # KNN()
 
+
+# Conté els diferents classificadors de Sklearn que s'utilitzaran.
 models = []
 models.append(('SVM', svm.SVC(C=1.0, kernel='rbf', gamma=0.7, probability=True)))
 models.append(('Logistic Regression', LogisticRegression(C=2.0, fit_intercept=True, penalty='l2', tol=0.001)))
@@ -465,8 +491,9 @@ models.append(('Linear Discriminant Analysis', LinearDiscriminantAnalysis()))
 models.append(('CART', DecisionTreeClassifier()))
 models.append(('K Nearest Neighbors', KNeighborsClassifier()))
 
+# Conté els diferents folds que es faran al K-Fold.
 i_index = [2, 3, 4, 6, 10, 20, 40, 60]
-
+# Calcula, per diferents folds, la accuracy en la classificació.
 for index, (name, model) in enumerate(models):
     for i in i_index:
         K_Fold = model_selection.KFold(n_splits=i, shuffle=True)
@@ -474,8 +501,9 @@ for index, (name, model) in enumerate(models):
         message = "%s (%f):  %f  (%f)" % (name, i, cv_results.mean(), cv_results.std())
         print(message)
 
+# Especifica el nombre de splits a fer en la cross-validation.
 cvs = [2, 5, 10, 20, 40, 60]
-
+# Calcula, pels diferents algoritmes d'ensamblat, la accuracy en la classificació.
 for cv_triat in cvs:
     clf = AdaBoostClassifier(n_estimators=150)
     scores = model_selection.cross_val_score(clf, x_data, y_data, cv=cv_triat)
@@ -507,15 +535,12 @@ for cv_triat in cvs:
     scores = cross_val_score(clf, x_data, y_data, scoring='accuracy', cv=cv_triat)
     print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(), "Stacking", cv_triat))
 
-    eclf = VotingClassifier(estimators=[('bag',
-                                         BaggingClassifier(base_estimator=DecisionTreeClassifier(),
-                                                           max_features=0.9,
-                                                           max_samples=0.9)),
-                                        ('rf',
-                                         RandomForestClassifier(n_estimators=300,
-                                                                random_state=1)),
-                                        ('hgb',
-                                         HistGradientBoostingClassifier(max_iter=50)),
+    eclf = VotingClassifier(estimators=[('bag', BaggingClassifier(base_estimator=DecisionTreeClassifier(),
+                                                                  max_features=0.9,
+                                                                  max_samples=0.9)),
+                                        ('rf', RandomForestClassifier(n_estimators=300,
+                                                                      random_state=1)),
+                                        ('hgb', HistGradientBoostingClassifier(max_iter=50)),
                                         ('ADA', AdaBoostClassifier(n_estimators=150))],
                             weights=[2, 2, 2, 1])
 
@@ -528,63 +553,55 @@ for cv_triat in cvs:
 
     grid = grid.fit(x_data, y_data)
 
-    best_estimator = grid.best_estimator_
+    best_estimator = grid.best_estimator_  # Troba els millors hiperparàmetres
     print(best_estimator)
 
     eclf = VotingClassifier(estimators=[
-        ('rf',
-         RandomForestClassifier(n_estimators=218,
-                                random_state=178)),
-        ('hgb',
-         HistGradientBoostingClassifier(max_iter=100))], voting='hard')
+                                        ('rf', RandomForestClassifier(n_estimators=218, random_state=178)),
+                                        ('hgb', HistGradientBoostingClassifier(max_iter=100))],
+                            voting='hard')
 
     scores = cross_val_score(eclf, x_data, y_data, scoring='accuracy', cv=cv_triat)
     print("Accuracy: %f (+/- %0.2f) [%s(%f)]" % (scores.mean(), scores.std(), "Voting2", cv_triat))
 
-# for clf, label in zip([ clf2, clf3, eclf], ['Random Forest', 'HistGradientBoosting', 'Ensemble']):
-# scores = cross_val_score(clf, x_data, y_data, scoring='accuracy', cv=40)
-# print("Accuracy: %f (+/- %0.2f) [%s]" % (scores.mean(), scores.std(), label))
 
-# scores = model_selection.cross_val_predict(eclf, x_data, y_data, cv=40, method='predict_proba')
-# curve_generator('Ensemble: Random Forest i HistGradientBoosting', scores)
+# Genera les corbes Precision-Recall i ROC pel Random Forest Classifier amb els hiperparàmetres especificats.
+clf = RandomForestClassifier(n_estimators=1000, max_depth=None, random_state=24)
+scores = model_selection.cross_val_predict(clf, x_data, y_data, cv=40, method='predict_proba')
+curve_generator('Random Forest', scores)
 
-# clf = RandomForestClassifier(n_estimators=1000, max_depth=None, random_state=24)
-# scores = model_selection.cross_val_predict(clf, x_data, y_data, cv=40, method='predict_proba')
-# curve_generator('Random Forest', scores)
-
-# recordar canviar y_v per y_data en la funcio curve_generator
-
+# Genera les corbes Precision-Recall i ROC pel Random Forest Classifier amb els hiperparàmetres especificats.
 clf = RandomForestClassifier(n_estimators=218, random_state=178, n_jobs=-1)
 scores = model_selection.cross_val_predict(clf, x_data, y_data, cv=40, method='predict_proba')
 curve_generator('Random Forest', scores)
 
-eclf = VotingClassifier(estimators=[('bag',
-                                     BaggingClassifier(base_estimator=DecisionTreeClassifier(),
-                                                       max_features=0.9,
-                                                       max_samples=0.9)),
-                                    ('rf',
-                                     RandomForestClassifier(n_estimators=300,
-                                                            random_state=1)),
-                                    ('hgb',
-                                     HistGradientBoostingClassifier(max_iter=50)),
+# Crea el classificador de votació amb els classificadors BaggingClassifier, RandomForestClassifier,
+# HistGradientBoostingClassifier i AdaBoostClassifier.
+eclf = VotingClassifier(estimators=[('bag', BaggingClassifier(base_estimator=DecisionTreeClassifier(),
+                                                              max_features=0.9,
+                                                              max_samples=0.9)),
+                                    ('rf', RandomForestClassifier(n_estimators=300,
+                                                                  random_state=1)),
+                                    ('hgb', HistGradientBoostingClassifier(max_iter=50)),
                                     ('ADA', AdaBoostClassifier(n_estimators=150))],
-                        weights=[2, 2, 2, 1], voting='soft')
+                        weights=[2, 2, 2, 1],
+                        voting='soft')
+# Fa la validació creuada dels models anteriors i mostra les corbes Precision-Recall i ROC.
 scores = model_selection.cross_val_predict(eclf, x_data, y_data, cv=60, method='predict_proba')
 curve_generator('Voting: bag+rf+hgb+ADA', scores)
 
-# clf.fit(x_t, y_t)
-# probs = clf.predict_proba(x_v)
-# print("Correct classification Random Forest     ", 0.7, "% of the data: ", clf.score(x_v, y_v))
 
 # +-----------------+
 # | HIPERPARÀMETRES |
 # +-----------------+
+# S'utilitza per calcular el temps d'execució del RandomForest optimitzant-lo amb GridSearch
 start = time.time()
 
 clf = RandomForestClassifier(n_estimators=150, max_depth=None, random_state=24)
 
 # params = { 'n_estimators': [20, 60, 100, 150, 200,300], 'random_state': [1,24,50,75, 200], 'max_depth': [1,6,16,32]}
-params = {'n_estimators': [20, 60, 100, 150, 200, 300, 1000], 'random_state': [1, 24, 36, 50, 64, 75, 200],
+params = {'n_estimators': [20, 60, 100, 150, 200, 300, 1000],
+          'random_state': [1, 24, 36, 50, 64, 75, 200],
           'max_depth': [1, 6, 16, 32]}
 grid = GridSearchCV(estimator=clf, param_grid=params, n_jobs=-1)
 
@@ -594,11 +611,11 @@ print(best_estimator)
 
 end = time.time()
 
-from scipy.stats import rv_discrete
-
 p = np.arange(1, 1000)
 s = np.arange(1, 1000)
 d = np.arange(1, 32)
+
+# S'utilitza per calcular el temps d'execució del RandomForest optimitzant-lo amb RandomizedSearchCV
 start = time.time()
 
 clf = RandomForestClassifier()
@@ -612,4 +629,4 @@ print(best_estimator)
 
 end = time.time()
 
-# print('time: '+str(end - start))
+print('time: ' + str(end - start))
